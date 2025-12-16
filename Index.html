@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem SPP - SMK Grafika Jatinegara</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .pay-card { transition: all 0.2s; border: 2px solid transparent; }
+        .pay-card:hover { border-color: #cbd5e1; }
+        .pay-card.active { border-color: #2563eb; background-color: #eff6ff; color: #1e40af; }
+        
+        /* Modal Transition */
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+    </style>
+</head>
+<body class="bg-gray-100 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center fade-in">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+            <div class="mb-6 flex justify-center items-center">
+                <!-- Logo Login -->
+                <img id="login-logo" src="" alt="Logo" class="h-24 object-contain mb-2 hidden">
+                <div id="login-icon" class="p-4 bg-blue-50 rounded-full hidden">
+                    <i data-lucide="school" class="w-12 h-12 text-blue-600"></i>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-1">SMK GRAFIKA JATINEGARA</h2>
+            <p class="text-gray-500 text-sm mb-6">Sistem Informasi Pembayaran SPP</p>
+            
+            <form id="form-login" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Username</label>
+                    <input type="text" id="login-user" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
+                    <input type="password" id="login-pass" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan password">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg">MASUK</button>
+            </form>
+            
+            <!-- Area Bantuan Login -->
+            <div class="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                <button id="btn-forgot-pass" class="text-xs text-gray-500 hover:text-blue-600 font-medium hover:underline flex items-center gap-1">
+                    Lupa Password?
+                </button>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=jai.ter1922@gmail.com&su=Bantuan%20Login%20Aplikasi%20SPP" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition">
+                    <i data-lucide="help-circle" class="w-3 h-3"></i> Kontak Admin
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS (LUPA PASS & UPDATE PASS) -->
+    <div id="modal-forgot-pass" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[60]">
+        <div class="modal-overlay absolute w-full h-full bg-black opacity-70"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-sm mx-auto rounded-xl shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-6 text-left px-6">
+                <div class="text-center mb-4">
+                    <div class="mx-auto bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mb-2"><i data-lucide="key-round" class="w-6 h-6 text-orange-600"></i></div>
+                    <h3 class="text-lg font-bold text-gray-800">Pemulihan Akun</h3>
+                    <p class="text-sm text-gray-500">Reset password Anda ke default (1234).</p>
+                </div>
+                <form id="form-reset-pass" class="space-y-3">
+                    <div><label class="text-xs font-bold text-gray-500 uppercase">Kode Keamanan</label><input type="password" id="recovery-code" required class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Masukkan kode reset..."><p class="text-[10px] text-gray-400 mt-1">*Kode default: smkbisa</p></div>
+                    <button type="submit" class="w-full bg-orange-600 text-white py-2 rounded-lg font-bold hover:bg-orange-700 transition">Reset Password Saya</button>
+                </form>
+                <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                    <button type="button" class="modal-close text-xs text-gray-400 hover:text-gray-600 underline w-full">Batal & Kembali Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-update-pass" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[60]">
+        <div class="modal-overlay absolute w-full h-full bg-black opacity-70"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-sm mx-auto rounded-xl shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="text-center mb-4">
+                    <div class="mx-auto bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center mb-2"><i data-lucide="lock" class="w-6 h-6 text-yellow-600"></i></div>
+                    <h3 class="text-lg font-bold text-gray-800">Perbarui Password</h3>
+                    <p class="text-sm text-gray-500">Demi keamanan, silakan ganti password default Anda.</p>
+                </div>
+                <form id="form-update-pass" class="space-y-3">
+                    <div><label class="text-xs font-bold text-gray-500">Password Baru</label><input type="password" id="new-pass" required class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                    <div class="flex flex-col gap-2 mt-4"><button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700">Simpan Password</button><button type="button" id="btn-skip-pass" class="w-full bg-transparent text-gray-500 py-2 hover:text-gray-700 text-sm">Lewati untuk sekarang</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP SCREEN -->
+    <div id="app-screen" class="flex h-screen overflow-hidden hidden">
+        <!-- SIDEBAR (DESKTOP) -->
+        <aside class="w-64 bg-slate-900 text-white flex-col shadow-xl z-20 hidden md:flex">
+            <div class="p-6 flex items-center space-x-3 border-b border-slate-700">
+                <img id="sidebar-logo" src="" alt="Logo" class="w-8 h-8 object-contain hidden">
+                <i data-lucide="school" id="sidebar-icon" class="w-8 h-8 text-blue-400"></i>
+                <h1 id="sidebar-school-name" class="text-xs font-bold tracking-tight leading-tight whitespace-pre-line">
+                    MEMUAT...
+                </h1>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2" id="desktop-nav"></nav>
+            <div class="p-4 border-t border-slate-700 text-center">
+                <button id="btn-logout" class="text-xs text-red-400 hover:text-red-300 flex items-center justify-center gap-1 w-full p-2 rounded hover:bg-slate-800 transition"><i data-lucide="log-out" class="w-3 h-3"></i> Keluar</button>
+                <div class="text-[10px] text-slate-500 mt-2">SMK GRAFIKA JATINEGARA 2025</div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+            <!-- MOBILE HEADER -->
+            <div class="md:hidden flex items-center justify-between bg-white p-4 shadow-sm z-10">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="school" class="w-6 h-6 text-blue-600"></i>
+                    <span class="font-bold text-slate-800 text-sm" id="mobile-school-name">Sistem Keuangan</span>
+                </div>
+                <!-- Mobile Nav & Logout -->
+                <div class="flex items-center gap-2">
+                    <div class="flex space-x-2" id="mobile-nav-container"></div>
+                    <div class="w-px h-6 bg-gray-200"></div>
+                    <button id="btn-mobile-logout" class="p-2 text-red-500 bg-red-50 rounded-md hover:bg-red-100 transition"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+
+            <div id="notification" class="fixed top-4 right-4 z-50 transform transition-all duration-300 translate-x-full opacity-0">
+                <div class="px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 text-white" id="notif-content"><span>Pesan</span></div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-8" id="content-area"></div>
+        </main>
+    </div>
+
+    <!-- MODAL ADD & EDIT SISWA -->
+    <div id="modal-add-student" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3">
+                    <p class="text-xl font-bold flex items-center gap-2"><i data-lucide="user-plus" class="text-blue-500"></i> Tambah Siswa Baru</p>
+                    <div class="modal-close cursor-pointer z-50"><i data-lucide="x" class="w-6 h-6"></i></div>
+                </div>
+                <form id="form-add-student" class="space-y-3">
+                    <div><label class="text-xs font-bold text-gray-500">NAMA</label><input type="text" name="name" required class="w-full p-2 border rounded" placeholder="Nama Lengkap"></div>
+                    <div><label class="text-xs font-bold text-gray-500">NIS</label><input type="text" name="nis" required class="w-full p-2 border rounded" placeholder="NIS"></div>
+                    <div><label class="text-xs font-bold text-gray-500">KELAS</label><input type="text" name="className" required class="w-full p-2 border rounded" placeholder="Kelas (mis: X-RPL)"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="text-xs font-bold text-gray-500">SPP</label><input type="number" name="monthlyFee" value="100000" class="w-full p-2 border rounded"></div>
+                        <div><label class="text-xs font-bold text-gray-500">DAFTAR ULANG</label><input type="number" name="reRegistrationFee" value="1000000" class="w-full p-2 border rounded"></div>
+                    </div>
+                    <div class="flex justify-end pt-2"><button type="button" class="modal-close px-4 bg-transparent p-3 rounded-lg text-indigo-500 hover:bg-gray-100 mr-2">Batal</button><button type="submit" class="px-4 bg-blue-600 p-3 rounded-lg text-white hover:bg-blue-700">Simpan Data</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-student" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3">
+                    <p class="text-xl font-bold">Edit Data Siswa</p>
+                    <div class="modal-close cursor-pointer z-50"><i data-lucide="x" class="w-6 h-6"></i></div>
+                </div>
+                <form id="form-edit-student" class="space-y-3">
+                    <input type="hidden" name="id" id="edit-id">
+                    <div><label class="text-xs font-bold text-gray-500">NAMA</label><input type="text" id="edit-name" name="name" required class="w-full p-2 border rounded"></div>
+                    <div><label class="text-xs font-bold text-gray-500">NIS</label><input type="text" id="edit-nis" name="nis" required class="w-full p-2 border rounded"></div>
+                    <div><label class="text-xs font-bold text-gray-500">KELAS</label><input type="text" id="edit-class" name="className" required class="w-full p-2 border rounded"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="text-xs font-bold text-gray-500">SPP</label><input type="number" id="edit-spp" name="monthlyFee" class="w-full p-2 border rounded"></div>
+                        <div><label class="text-xs font-bold text-gray-500">DAFTAR ULANG</label><input type="number" id="edit-du" name="reRegistrationFee" class="w-full p-2 border rounded"></div>
+                    </div>
+                    <div class="flex justify-end pt-2"><button type="button" class="modal-close px-4 bg-transparent p-3 rounded-lg text-indigo-500 hover:bg-gray-100 mr-2">Batal</button><button type="submit" class="px-4 bg-blue-600 p-3 rounded-lg text-white hover:bg-blue-700">Simpan Perubahan</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL INFO SISWA -->
+    <div id="modal-info-student" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-2xl mx-auto rounded-xl shadow-lg z-50 overflow-y-auto max-h-[90vh]">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b mb-4">
+                    <p class="text-xl font-bold flex items-center gap-2"><i data-lucide="user" class="text-blue-500"></i> Informasi Siswa & Tagihan</p>
+                    <div class="modal-close cursor-pointer z-50"><i data-lucide="x" class="w-6 h-6"></i></div>
+                </div>
+                <div id="info-student-content" class="space-y-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        const SCHOOL_INFO = {
+            name: "SMK GRAFIKA JATINEGARA",
+            logoUrl: "https://i.imgur.com/3hGgU67.png", 
+            address: "Jl. Raya Jatinegara - Slawi KM. 2 - Lebakwangi - Jatinegara - Tegal | Telp: +62 856 4039 6475"
+        };
+
+        const STORAGE_KEY_STUDENTS = 'spp_data_students';
+        const STORAGE_KEY_TRANSACTIONS = 'spp_data_transactions';
+        const STORAGE_KEY_LOGIN = 'spp_login_session';
+        const STORAGE_KEY_PASSWORD = 'spp_admin_password';
+        const RECOVERY_CODE = 'smkbisa'; 
+
+        let studentsData = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS)) || [];
+        let transactionsData = JSON.parse(localStorage.getItem(STORAGE_KEY_TRANSACTIONS)) || [];
+        
+        let currentTab = 'dashboard';
+        let studentFilterClass = 'ALL';
+        let paymentCart = [];
+        let currentStudentId = null;
+        let dashYear = '';
+        let dashSem = 'ALL';
+
+        // --- AUTH SYSTEM ---
+        function checkLogin() {
+            const isLogged = sessionStorage.getItem(STORAGE_KEY_LOGIN);
+            const loginScreen = document.getElementById('login-screen');
+            const appScreen = document.getElementById('app-screen');
+            
+            if (isLogged) {
+                loginScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                refreshUI(); 
+            } else {
+                loginScreen.classList.remove('hidden');
+                appScreen.classList.add('hidden');
+            }
+        }
+        function getStoredPassword() { return localStorage.getItem(STORAGE_KEY_PASSWORD) || '1234'; }
+
+        // --- GLOBAL HELPER ---
+        function getAcademicInfo(dateStr) {
+            const date = new Date(dateStr);
+            const month = date.getMonth() + 1; 
+            const year = date.getFullYear();
+            let semester = "", academicYear = "";
+            if (month >= 7 && month <= 12) { semester = "Ganjil"; academicYear = `${year}/${year + 1}`; } 
+            else { semester = "Genap"; academicYear = `${year - 1}/${year}`; }
+            return { semester, academicYear };
+        }
+
+        function getSemesterByMonth(monthName) {
+            const ganjil = ["Juli","Agustus","September","Oktober","November","Desember"];
+            return ganjil.includes(monthName) ? "Ganjil" : "Genap";
+        }
+
+        // --- EVENT HANDLERS ---
+        document.getElementById('form-login').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            const currentPass = getStoredPassword();
+
+            if (u === 'admin' && p === currentPass) {
+                sessionStorage.setItem(STORAGE_KEY_LOGIN, 'true');
+                checkLogin();
+                showToast('Login Berhasil');
+                if (currentPass === '1234') openUpdatePassModal();
+            } else { alert('Username atau Password salah!'); }
+        });
+
+        document.getElementById('btn-forgot-pass').addEventListener('click', () => { document.getElementById('modal-forgot-pass').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active'); });
+        document.getElementById('form-reset-pass').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (document.getElementById('recovery-code').value === RECOVERY_CODE) {
+                localStorage.setItem(STORAGE_KEY_PASSWORD, '1234');
+                alert('Password reset ke "1234".');
+                document.getElementById('modal-forgot-pass').classList.add('opacity-0', 'pointer-events-none');
+            } else alert('Kode salah!');
+        });
+        
+        function openUpdatePassModal() { document.getElementById('modal-update-pass').classList.remove('opacity-0', 'pointer-events-none'); }
+        document.getElementById('form-update-pass').addEventListener('submit', (e) => {
+            e.preventDefault();
+            localStorage.setItem(STORAGE_KEY_PASSWORD, document.getElementById('new-pass').value);
+            showToast('Password diperbarui');
+            document.getElementById('modal-update-pass').classList.add('opacity-0', 'pointer-events-none');
+        });
+        document.getElementById('btn-skip-pass').addEventListener('click', () => document.getElementById('modal-update-pass').classList.add('opacity-0', 'pointer-events-none'));
+        document.getElementById('btn-logout').addEventListener('click', () => { if(confirm('Keluar?')) { sessionStorage.removeItem(STORAGE_KEY_LOGIN); location.reload(); } });
+
+        function saveData() { localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(studentsData)); localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactionsData)); refreshUI(); }
+        
+        // --- UI Setup ---
+        document.getElementById('sidebar-school-name').textContent = SCHOOL_INFO.name;
+        const logoImg = document.getElementById('sidebar-logo'), logoIcon = document.getElementById('sidebar-icon'), loginLogo = document.getElementById('login-logo'), loginIcon = document.getElementById('login-icon');
+        if (SCHOOL_INFO.logoUrl) {
+            logoImg.src = SCHOOL_INFO.logoUrl; logoImg.classList.remove('hidden'); logoIcon.classList.add('hidden');
+            loginLogo.src = SCHOOL_INFO.logoUrl; loginLogo.classList.remove('hidden'); loginIcon.classList.add('hidden');
+            logoImg.onerror = () => { logoImg.classList.add('hidden'); logoIcon.classList.remove('hidden'); loginLogo.classList.add('hidden'); loginIcon.classList.remove('hidden'); };
+        } else { logoIcon.classList.remove('hidden'); loginIcon.classList.remove('hidden'); }
+
+        function formatRupiah(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0); }
+        function formatDate(iso) { if (!iso) return '-'; return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)); }
+        function cleanNumber(v) { return Number(String(v).replace(/[^0-9,]/g, '').replace(',', '.')) || 0; }
+        function showToast(msg, type = 'success') {
+            const el = document.getElementById('notification'), c = document.getElementById('notif-content');
+            el.classList.remove('translate-x-full', 'opacity-0'); c.innerHTML = `<span>${msg}</span>`;
+            c.className = `px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+            setTimeout(() => el.classList.add('translate-x-full', 'opacity-0'), 3000);
+        }
+        function cardHTML(title, value, icon, colorClass) {
+            return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4"><div class="p-4 rounded-full bg-opacity-10 ${colorClass}"><i data-lucide="${icon}" class="w-8 h-8 ${colorClass.split(' ')[1]}"></i></div><div><p class="text-sm text-gray-500 font-medium">${title}</p><h3 class="text-2xl font-bold text-gray-800">${value}</h3></div></div>`;
+        }
+        function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+
+        const tabs = [{ id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' }, { id: 'students', label: 'Data Siswa', icon: 'users' }, { id: 'payment', label: 'Pembayaran', icon: 'credit-card' }, { id: 'history', label: 'Riwayat', icon: 'history' }];
+        function renderNavigation() {
+            document.getElementById('desktop-nav').innerHTML = tabs.map(t => `<button data-tab="${t.id}" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-white"><i data-lucide="${t.icon}" class="w-5 h-5"></i><span class="font-medium">${t.label}</span></button>`).join('');
+            document.getElementById('mobile-nav-container').innerHTML = tabs.slice(0,3).map(t => `<button data-tab="${t.id}" class="mobile-nav-item p-2 rounded-md text-gray-500 hover:bg-gray-100"><i data-lucide="${t.icon}" class="w-5 h-5"></i></button>`).join('');
+            lucide.createIcons();
+        }
+        renderNavigation();
+
+        // --- GLOBAL EVENTS ---
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#btn-logout') || e.target.closest('#btn-mobile-logout')) {
+                if(confirm('Keluar dari aplikasi?')) { sessionStorage.removeItem(STORAGE_KEY_LOGIN); location.reload(); }
+            }
+
+            const navBtn = e.target.closest('button[data-tab]');
+            if (navBtn) { currentTab = navBtn.dataset.tab; refreshUI(); }
+            const classBtn = e.target.closest('.btn-filter-class');
+            if (classBtn) { studentFilterClass = classBtn.dataset.class; refreshUI(); }
+            if (e.target.closest('#btn-add-to-cart')) addToCart();
+            if (e.target.closest('.btn-remove-item')) removeFromCart(e.target.closest('.btn-remove-item').dataset.index);
+            if (e.target.closest('#btn-process-payment')) processCombinedPayment();
+            if (e.target.closest('#btn-clear-cart')) { paymentCart = []; renderCart(); updateBillingInfo(); }
+            
+            const typeCard = e.target.closest('.pay-card');
+            if (typeCard) {
+                const type = typeCard.dataset.type;
+                document.getElementById('pay-type-select').value = type;
+                document.querySelectorAll('.pay-card').forEach(el => el.classList.remove('active'));
+                typeCard.classList.add('active');
+                handleTypeChange(type);
+            }
+
+            if (e.target.closest('#btn-open-add-student')) openAddModal();
+            if (e.target.closest('.btn-delete-student')) deleteStudent(e.target.closest('.btn-delete-student').dataset.id);
+            if (e.target.closest('.btn-edit-student')) openEditModal(e.target.closest('.btn-edit-student').dataset.id);
+            if (e.target.closest('.btn-info-student')) openInfoModal(e.target.closest('.btn-info-student').dataset.id);
+            if (e.target.closest('.btn-direct-pay')) {
+                const sid = e.target.closest('.btn-direct-pay').dataset.id;
+                closeAllModals(); currentTab = 'payment'; currentStudentId = sid; refreshUI();
+            }
+            if (e.target.closest('#btn-exec-student-recap')) {
+                const btn = e.target.closest('#btn-exec-student-recap');
+                const year = document.getElementById('modal-recap-year').value;
+                const sem = document.getElementById('modal-recap-semester').value;
+                if(!year) { alert('Harap pilih Tahun Ajaran!'); return; }
+                printStudentRecap(btn.dataset.id, year, sem);
+            }
+            if (e.target.closest('#btn-download-dash')) downloadRecap(dashYear, dashSem);
+
+            if (e.target.closest('.btn-print-invoice')) printSingleInvoice(e.target.closest('.btn-print-invoice').dataset.id);
+            if (e.target.closest('#btn-download-template')) downloadExcelTemplate();
+            if (e.target.closest('#btn-trigger-upload')) document.getElementById('input-excel-file').click();
+            if (e.target.closest('#btn-download-recap')) downloadRecap();
+            
+            // RESET TRANSACTIONS ONLY (FIXED)
+            if (e.target.id === 'btn-reset-transactions') {
+                if(confirm('Yakin ingin MENGHAPUS SEMUA riwayat transaksi? Data siswa AMAN dan tidak akan hilang.')) {
+                    transactionsData = [];
+                    saveData();
+                    showToast('Riwayat transaksi berhasil dihapus');
+                }
+            }
+            
+            if (e.target.closest('.modal-close') || e.target.classList.contains('modal-overlay')) closeAllModals();
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'input-excel-file') { handleExcelUpload(e.target.files[0]); e.target.value = ''; }
+            if (e.target.id === 'pay-student-select') { currentStudentId = e.target.value; paymentCart = []; renderCart(); updateBillingInfo(); }
+            if (e.target.id === 'pay-month-select' || e.target.id === 'pay-year-input') updateBillingInfo();
+            if (e.target.id === 'dash-year') { dashYear = e.target.value; refreshUI(); }
+            if (e.target.id === 'dash-sem') { dashSem = e.target.value; refreshUI(); }
+        });
+        document.addEventListener('input', (e) => { if (e.target.id === 'pay-year-input') updateBillingInfo(); });
+        document.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (e.target.id === 'form-add-student') handleAddStudent(e.target);
+            if (e.target.id === 'form-edit-student') handleEditStudent(e.target);
+        });
+
+        // --- LOGIC ---
+        function closeAllModals() { document.querySelectorAll('.modal').forEach(m => m.classList.add('opacity-0', 'pointer-events-none')); document.body.classList.remove('modal-active'); }
+        function openAddModal() { document.getElementById('modal-add-student').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active'); }
+        function openEditModal(id) {
+            const student = studentsData.find(s => s.id === id); if(!student) return;
+            document.getElementById('edit-id').value = student.id; document.getElementById('edit-name').value = student.name;
+            document.getElementById('edit-nis').value = student.nis; document.getElementById('edit-class').value = student.className;
+            document.getElementById('edit-spp').value = student.monthlyFee; document.getElementById('edit-du').value = student.reRegistrationFee;
+            document.getElementById('modal-edit-student').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active');
+        }
+        function openInfoModal(id) {
+            const student = studentsData.find(s => s.id === id); if(!student) return;
+            const container = document.getElementById('info-student-content');
+            const paidSPP = transactionsData.filter(t => t.studentId === id && t.paymentType === 'SPP').reduce((s,t)=>s+t.amount,0);
+            const paidDU = transactionsData.filter(t => t.studentId === id && t.paymentType === 'DAFTAR_ULANG').reduce((s,t)=>s+t.amount,0);
+            const totalDU = Number(student.reRegistrationFee);
+            const remainDU = Math.max(0, totalDU - paidDU);
+            const history = transactionsData.filter(t => t.studentId === id).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            // ACADEMIC INFO
+            const today = new Date();
+            const currAcadInfo = getAcademicInfo(today);
+            
+            // SPP Grid Logic
+            const allMonths = ["Juli","Agustus","September","Oktober","November","Desember", "Januari","Februari","Maret","April","Mei","Juni"];
+            const sem1 = allMonths.slice(0,6); const sem2 = allMonths.slice(6,12);
+            const currentMonths = currAcadInfo.semester === 'Ganjil' ? sem1 : sem2;
+            let sppHtml = `<div class="bg-white p-3 rounded-lg border mb-4"><div class="flex justify-between items-center mb-2"><p class="text-xs font-bold text-gray-500 uppercase">Status SPP (${currAcadInfo.academicYear} - ${currAcadInfo.semester})</p><div class="text-[10px] text-gray-400">Tagihan/bln: ${formatRupiah(student.monthlyFee)}</div></div><div class="grid grid-cols-3 gap-2">`;
+            currentMonths.forEach(m => {
+                 let checkYear = parseInt(currAcadInfo.academicYear.split('/')[0]);
+                 if (currAcadInfo.semester === 'Genap') checkYear += 1;
+                 const isPaid = transactionsData.some(t => t.studentId === id && t.paymentType === 'SPP' && t.month === m && parseInt(t.year) === checkYear);
+                 const color = isPaid ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200';
+                 sppHtml += `<div class="border rounded p-1 text-center ${color}"><div class="text-[10px] font-bold">${m}</div><div class="text-[10px]">${isPaid?'LUNAS':'BELUM'}</div></div>`;
+            });
+            sppHtml += `</div></div>`;
+
+            // Recap Options
+            const years = [...new Set(transactionsData.map(tx => new Date(tx.createdAt).getFullYear()))]; if(years.length === 0) years.push(new Date().getFullYear());
+            const acaOpts = years.map(y => `${y}/${y+1}`).concat(years.map(y=>`${y-1}/${y}`)).filter((v,i,a)=>a.indexOf(v)===i).sort().reverse().map(y => `<option value="${y}">${y}</option>`).join('');
+
+            container.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 text-sm mb-4"><div><p class="text-gray-500 text-xs">NAMA SISWA</p><p class="font-bold text-lg">${student.name}</p></div><div><p class="text-gray-500 text-xs">NIS / KELAS</p><p class="font-bold">${student.nis} / ${student.className}</p></div></div>
+                ${sppHtml}
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 flex justify-between items-center mb-4"><div><p class="text-xs text-blue-600 font-bold uppercase">Daftar Ulang</p><p class="text-sm">Tagihan: ${formatRupiah(totalDU)}</p><p class="text-sm">Dibayar: ${formatRupiah(paidDU)}</p></div><div class="text-right"><p class="text-xs text-gray-500">KEKURANGAN DU</p><p class="text-xl font-bold ${remainDU > 0 ? 'text-red-500' : 'text-green-600'}">${remainDU > 0 ? formatRupiah(remainDU) : 'LUNAS'}</p></div></div>
+                <div class="flex flex-col gap-3"><button data-id="${student.id}" class="btn-direct-pay w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 flex items-center justify-center gap-2"><i data-lucide="credit-card" class="w-5 h-5"></i> Bayar Sekarang</button>
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200"><label class="text-xs font-bold text-gray-500 block mb-2">UNDUH REKAPITULASI</label><div class="flex gap-2"><select id="modal-recap-year" class="text-xs border p-2 rounded flex-1"><option value="">Pilih Tahun Ajaran</option>${acaOpts}</select><select id="modal-recap-semester" class="text-xs border p-2 rounded flex-1"><option value="ALL">Semua Semester</option><option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select><button id="btn-exec-student-recap" data-id="${student.id}" class="bg-white border hover:bg-gray-100 px-3 py-2 rounded font-bold"><i data-lucide="download" class="w-4 h-4"></i></button></div></div>
+                </div>
+                <div class="border-t pt-4 mt-4"><h4 class="font-bold text-sm mb-2">Riwayat Terbaru</h4><div class="max-h-48 overflow-y-auto border rounded-lg"><table class="w-full text-xs text-left"><thead class="bg-gray-50"><tr><th class="p-2">Tanggal</th><th class="p-2">Ket</th><th class="p-2 text-right">Jumlah</th></tr></thead><tbody>${history.length ? history.slice(0,10).map(t => `<tr class="border-b"><td class="p-2 text-gray-500">${formatDate(t.createdAt)}</td><td class="p-2">${t.paymentType === 'SPP' ? `SPP ${t.month} ${t.year}` : 'Daftar Ulang'}</td><td class="p-2 text-right font-bold text-emerald-600">${formatRupiah(t.amount)}</td></tr>`).join('') : '<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada transaksi</td></tr>'}</tbody></table></div></div>`;
+            document.getElementById('modal-info-student').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active'); lucide.createIcons();
+        }
+
+        function handleEditStudent(form) {
+            const formData = new FormData(form);
+            const index = studentsData.findIndex(s => s.id === document.getElementById('edit-id').value);
+            if (index !== -1) {
+                studentsData[index].name = formData.get('name'); studentsData[index].nis = formData.get('nis'); studentsData[index].className = formData.get('className');
+                studentsData[index].monthlyFee = Number(formData.get('monthlyFee')); studentsData[index].reRegistrationFee = Number(formData.get('reRegistrationFee'));
+                saveData(); showToast('Data diperbarui'); closeAllModals();
+            }
+        }
+
+        function handleTypeChange(type) { if (type === 'SPP') document.getElementById('pay-month-container').classList.remove('hidden'); else document.getElementById('pay-month-container').classList.add('hidden'); updateBillingInfo(); }
+
+        function updateBillingInfo() {
+            const sId = document.getElementById('pay-student-select')?.value, type = document.getElementById('pay-type-select')?.value;
+            if (!sId) return;
+            const student = studentsData.find(s => s.id === sId); if (!student) return;
+            const year = document.getElementById('pay-year-input')?.value, month = document.getElementById('pay-month-select')?.value;
+            let totalBill=0, totalPaid=0;
+
+            if (type === 'SPP') {
+                if (!month) return; totalBill = Number(student.monthlyFee);
+                totalPaid = transactionsData.filter(tx => tx.studentId === sId && tx.paymentType === 'SPP' && Number(tx.year) == year && tx.month === month).reduce((s,t)=>s+Number(t.amount),0) + paymentCart.filter(i => i.type === 'SPP' && i.year == year && i.month === month).reduce((s,i)=>s+i.amount,0);
+            } else {
+                totalBill = Number(student.reRegistrationFee);
+                totalPaid = transactionsData.filter(tx => tx.studentId === sId && tx.paymentType === 'DAFTAR_ULANG').reduce((s,t)=>s+Number(t.amount),0) + paymentCart.filter(i => i.type === 'DAFTAR_ULANG').reduce((s,i)=>s+i.amount,0);
+            }
+            const remaining = Math.max(0, totalBill - totalPaid);
+            document.getElementById('info-total').textContent = formatRupiah(totalBill); document.getElementById('info-paid').textContent = formatRupiah(totalPaid);
+            const elRemain = document.getElementById('info-remain');
+            if(remaining===0) { elRemain.innerHTML = '<span class="text-green-600">LUNAS</span>'; document.getElementById('pay-amount-input').disabled = true; document.getElementById('pay-amount-input').value = ''; }
+            else { elRemain.textContent = formatRupiah(remaining); document.getElementById('pay-amount-input').disabled = false; document.getElementById('pay-amount-input').value = remaining; }
+        }
+
+        function addToCart() {
+            if (!currentStudentId) { alert("Pilih siswa dulu!"); return; }
+            const type = document.getElementById('pay-type-select').value, amount = Number(document.getElementById('pay-amount-input').value);
+            const year = document.getElementById('pay-year-input').value, month = document.getElementById('pay-month-select').value;
+            if (amount <= 0) { alert("Nominal salah"); return; }
+            if (type === 'SPP' && !month) { alert("Pilih bulan"); return; }
+            if (type === 'SPP' && paymentCart.some(i => i.type===type && i.month===month && i.year===year)) { alert("Sudah ada di daftar"); return; }
+            paymentCart.push({ type, amount, year, month: type==='SPP'?month:'-', desc: type==='SPP'?`SPP ${month} ${year}`:'Daftar Ulang' });
+            if (type === 'SPP') { const sel = document.getElementById('pay-month-select'); if(sel.selectedIndex<11) sel.selectedIndex++; }
+            renderCart(); updateBillingInfo();
+        }
+
+        function removeFromCart(idx) { paymentCart.splice(idx, 1); renderCart(); updateBillingInfo(); }
+
+        function renderCart() {
+            const c = document.getElementById('cart-items'); if(!c) return;
+            if (paymentCart.length === 0) c.innerHTML = `<div id="cart-empty" class="h-full flex flex-col items-center justify-center text-gray-300 py-10"><i data-lucide="receipt" class="w-10 h-10 mb-2"></i><p class="text-xs">Keranjang kosong</p></div>`;
+            else c.innerHTML = paymentCart.map((i,x) => `<div class="flex justify-between items-center bg-white p-2 rounded border mb-1 text-sm"><div class="flex-1"><div class="font-bold text-xs">${i.desc} ${i.type==='SPP'?`(${i.semester})`:''}</div><div class="text-xs text-emerald-600">${formatRupiah(i.amount)}</div></div><button class="btn-remove-item text-gray-400 hover:text-red-500" data-index="${x}"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('');
+            const total = paymentCart.reduce((s,i)=>s+i.amount,0);
+            document.getElementById('cart-total').textContent = formatRupiah(total);
+            const btn = document.getElementById('btn-process-payment');
+            btn.disabled = paymentCart.length===0;
+            btn.className = `w-full font-bold py-3 rounded-xl flex justify-center gap-3 transition ${paymentCart.length>0?'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg':'bg-gray-300 text-gray-500 cursor-not-allowed'}`;
+            btn.innerHTML = `<i data-lucide="printer" class="w-4 h-4"></i> BAYAR & CETAK ${paymentCart.length>0?`(${formatRupiah(total)})`:''}`;
+            lucide.createIcons();
+        }
+
+        function processCombinedPayment() {
+            if (!paymentCart.length) return;
+            const student = studentsData.find(s => s.id === currentStudentId);
+            const note = document.getElementById('pay-notes').value, now = new Date().toISOString(), batchId = generateId();
+            const newTx = paymentCart.map(i => {
+                let exp=0, short=0;
+                if(i.type==='SPP') { exp=Number(student.monthlyFee); const pd=transactionsData.filter(t=>t.studentId===student.id&&t.paymentType==='SPP'&&t.month===i.month&&t.year==i.year).reduce((s,t)=>s+t.amount,0); short=Math.max(0,exp-(pd+i.amount)); }
+                else { exp=Number(student.reRegistrationFee); const pd=transactionsData.filter(t=>t.studentId===student.id&&t.paymentType==='DAFTAR_ULANG').reduce((s,t)=>s+t.amount,0); short=Math.max(0,exp-(pd+i.amount)); }
+                return { id: generateId(), batchId, studentId: student.id, studentName: student.name, studentNis: student.nis, className: student.className, paymentType: i.type, amount: i.amount, expectedAmount: exp, shortage: short, month: i.month, year: i.year, notes: note, createdAt: now };
+            });
+            transactionsData.unshift(...newTx); saveData(); paymentCart=[]; document.getElementById('pay-notes').value=''; renderCart(); showToast('Pembayaran berhasil'); printCombinedInvoice(newTx, student); updateBillingInfo();
+        }
+
+        function printCombinedInvoice(txList, student) {
+            const win = window.open('','_blank','height=600,width=800');
+            const total = txList.reduce((s,t)=>s+t.amount,0);
+            const info = getAcademicInfo(txList[0].createdAt);
+            const rows = txList.map((t,i)=> {
+                const sem = t.paymentType === 'SPP' ? getSemesterByMonth(t.month) : '-';
+                const shortageColor = t.shortage > 0 ? '#ef4444' : '#16a34a'; // GREEN
+                const lunasText = t.shortage > 0 ? formatRupiah(t.shortage) : 'LUNAS';
+                return `<tr class="item-row"><td style="text-align:center">${i+1}</td><td>${t.paymentType==='SPP'?`SPP ${t.month} ${t.year} (${sem})`:'Daftar Ulang'}</td><td style="text-align:right">${formatRupiah(t.amount)}</td><td style="text-align:right;color:${shortageColor};font-weight:bold">${lunasText}</td></tr>`;
+            }).join('');
+            const logo = SCHOOL_INFO.logoUrl?`<img src="${SCHOOL_INFO.logoUrl}" style="height:60px;margin-bottom:10px">`:'';
+            const html = `<html><head><title>Kuitansi</title><style>body{font-family:'Segoe UI',sans-serif;padding:30px;color:#333;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:3px solid #1e40af;padding-bottom:15px;margin-bottom:20px}.school-name{font-size:20px;font-weight:900;color:#1e40af;text-transform:uppercase}.address{font-size:11px;color:#666}.title{text-align:center;font-size:16px;font-weight:bold;text-decoration:underline;margin-bottom:15px}.info-table{width:100%;margin-bottom:15px;font-size:13px}.info-table td{padding:2px 0;vertical-align:top}.main-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px}.main-table th{border-bottom:2px solid #333;padding:8px;text-align:left}.main-table td{border-bottom:1px dashed #ccc;padding:8px}.main-table th:last-child,.main-table td:last-child{text-align:right}.total-row{display:flex;justify-content:space-between;font-weight:bold;font-size:14px;color:#059669;margin-top:10px}.signature{margin-top:30px;display:flex;justify-content:flex-end}.sign-box{text-align:center;width:180px}.line{border-bottom:1px solid #000;margin-top:50px}</style></head><body><div class="header">${logo}<div class="school-name">${SCHOOL_INFO.name}</div><div class="address">${SCHOOL_INFO.address}</div></div><div class="title">BUKTI PEMBAYARAN</div><table class="info-table"><tr><td width="100"><b>Nama</b></td><td>: ${student.name}</td><td align="right"><b>Tanggal</b> : ${formatDate(txList[0].createdAt)}</td></tr><tr><td><b>NIS</b></td><td>: ${student.nis}</td><td align="right"><b>Semester</b> : ${info.semester} ${info.academicYear}</td></tr><tr><td><b>Kelas</b></td><td>: ${student.className}</td><td align="right"><b>No. Ref</b> : #${txList[0].id.slice(0,6).toUpperCase()}</td></tr></table><table class="main-table"><thead><tr><th style="text-align:center;width:30px">No</th><th>Keterangan</th><th style="text-align:right">Bayar</th><th style="text-align:right">Sisa</th></tr></thead><tbody>${rows}</tbody></table><div class="total-row"><span>TOTAL BAYAR</span><span>${formatRupiah(total)}</span></div><div class="signature"><div class="sign-box"><div style="font-size:11px;margin-bottom:5px">Jatinegara, ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div><div style="font-weight:bold;font-size:13px">Bendahara</div><div class="line"></div><div style="font-size:11px">( Tanda Tangan & Stempel )</div></div></div><script>window.onload=()=>{window.print()}<\/script></body></html>`;
+            win.document.write(html); win.document.close();
+        }
+
+        function printSingleInvoice(id) { const tx = transactionsData.find(t=>t.id===id); if(tx) printCombinedInvoice([tx], {name:tx.studentName,nis:tx.studentNis,className:tx.className}); }
+
+        function handleAddStudent(f) {
+            const d = new FormData(f);
+            const s = { id: generateId(), name: d.get('name'), nis: d.get('nis'), className: d.get('className'), monthlyFee: Number(d.get('monthlyFee')), reRegistrationFee: Number(d.get('reRegistrationFee')), createdAt: new Date().toISOString() };
+            if(studentsData.some(x=>x.nis===s.nis)) { showToast('NIS Terdaftar','error'); return; }
+            studentsData.push(s); saveData(); showToast('Siswa Ditambahkan'); f.reset(); closeAllModals();
+        }
+
+        function deleteStudent(id) { if(confirm('Hapus data?')) { studentsData=studentsData.filter(s=>s.id!==id); saveData(); showToast('Dihapus'); } }
+
+        function printStudentRecap(id, year, sem) {
+            const s = studentsData.find(x=>x.id===id);
+            const h = transactionsData.filter(t => {
+                if(t.studentId !== id) return false;
+                const info = getAcademicInfo(t.createdAt);
+                if(info.academicYear !== year) return false;
+                if(sem !== 'ALL' && info.semester !== sem) return false;
+                return true;
+            }).sort((a,b) => new Date(a.createdAt)-new Date(b.createdAt));
+
+            if(!h.length) { alert('Data kosong'); return; }
+            const data = [[`REKAP ${year} (${sem})`], [`${s.name} - ${s.className}`], [], ["Tgl", "Ket", "Sem", "Jml"], ...h.map(t => [formatDate(t.createdAt), t.paymentType==='SPP'?`SPP ${t.month}`:'DU', getAcademicInfo(t.createdAt).semester, t.amount]), ["", "", "TOTAL", h.reduce((a,b)=>a+b.amount,0)]];
+            const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap"); XLSX.writeFile(wb, `Rekap_${s.name}.xlsx`);
+        }
+
+        function downloadRecap(y, s) {
+            if(!y) { alert('Pilih Tahun!'); return; }
+            const f = transactionsData.filter(t => {
+                const i = getAcademicInfo(t.createdAt);
+                return i.academicYear === y && (s === 'ALL' || i.semester === s);
+            });
+            if(!f.length) { alert('Data kosong'); return; }
+            const data = [[`REKAP ${y} ${s}`], ["Tgl", "NIS", "Nama", "Kelas", "Ket", "Sem", "Jml"], ...f.map(t => [formatDate(t.createdAt), t.studentNis, t.studentName, t.className, t.paymentType==='SPP'?`SPP ${t.month}`:'DU', getAcademicInfo(t.createdAt).semester, t.amount]), ["", "", "", "", "", "TOTAL", f.reduce((a,b)=>a+b.amount,0)]];
+            const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap"); XLSX.writeFile(wb, `Laporan_${y.replace('/','-')}.xlsx`);
+        }
+
+        function downloadExcelTemplate() {
+            const d = [["Nama Lengkap", "NIS", "Kelas", "Nominal SPP", "Nominal Daftar Ulang"], ["Muhammad Khoza'i", "202300126895", "X-TKJ", 100000, 1000000]];
+            const ws = XLSX.utils.aoa_to_sheet(d); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, "Template_Siswa.xlsx");
+        }
+
+        function handleExcelUpload(f) {
+            if(!f) return; const r = new FileReader();
+            r.onload = (e) => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1}).slice(1);
+                let c=0; json.forEach(r => { if(r[0]&&r[1]&&!studentsData.some(s=>s.nis==r[1])) { studentsData.push({ id:generateId(), name:String(r[0]), nis:String(r[1]), className:String(r[2]||'-'), monthlyFee:cleanNumber(r[3])||100000, reRegistrationFee:cleanNumber(r[4])||1000000, createdAt:new Date().toISOString() }); c++; } });
+                saveData(); showToast(`${c} siswa diimpor`);
+            }; r.readAsArrayBuffer(f);
+        }
+
+        function downloadMonthlyRecap() {
+            const month = document.getElementById('recap-month').value;
+            const year = document.getElementById('recap-year').value;
+            const filtered = transactionsData.filter(tx => {
+                const d = new Date(tx.createdAt);
+                return d.toLocaleString('id-ID', {month:'long'}) === month && d.getFullYear().toString() === year;
+            });
+            if (filtered.length === 0) { alert('Tidak ada data.'); return; }
+            const data = [ [`LAPORAN KEUANGAN ${month.toUpperCase()} ${year}`], ["Tanggal", "NIS", "Nama", "Kelas", "Keterangan", "Nominal"],
+                ...filtered.map(tx => [formatDate(tx.createdAt), tx.studentNis, tx.studentName, tx.className, tx.paymentType === 'SPP' ? `SPP ${tx.month}` : 'Daftar Ulang', tx.amount]),
+                ["", "", "", "", "TOTAL", filtered.reduce((a,b)=>a+b.amount,0)] ];
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Rekap");
+            XLSX.writeFile(wb, `Laporan_${month}_${year}.xlsx`);
+        }
+
+        // Render Views
+        function refreshUI() {
+            updateActiveNav();
+            const container = document.getElementById('content-area');
+            if (currentTab === 'dashboard') renderDashboard(container);
+            else if (currentTab === 'students') renderStudents(container);
+            else if (currentTab === 'payment') renderPayment(container);
+            else if (currentTab === 'history') renderHistory(container);
+            lucide.createIcons();
+        }
+
+        function updateActiveNav() {
+            document.querySelectorAll('.nav-item').forEach(el => el.className = `nav-item w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-all ${el.dataset.tab === currentTab ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`);
+        }
+
+        function renderDashboard(c) {
+            const rev = transactionsData.reduce((a,b)=>a+b.amount,0);
+            c.innerHTML = `<div class="space-y-6 fade-in"><h2 class="text-2xl font-bold">Dashboard</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${cardHTML('Total Siswa',studentsData.length,'users','bg-blue-500 text-blue-500')}${cardHTML('Pemasukan',formatRupiah(rev),'credit-card','bg-emerald-500 text-emerald-500')}${cardHTML('Transaksi',transactionsData.length,'history','bg-purple-500 text-purple-500')}</div></div>`;
+        }
+
+        function renderStudents(c) {
+            let filtered = studentsData;
+            if(studentFilterClass !== 'ALL') filtered = studentsData.filter(s => s.className.toUpperCase().startsWith(studentFilterClass));
+            const btnCls = (cls) => `btn-filter-class px-3 py-1 rounded-full text-[10px] font-bold ${studentFilterClass===cls?'bg-blue-600 text-white':'bg-gray-200 text-gray-600'}`;
+            c.innerHTML = `
+            <div class="space-y-4 fade-in">
+                <div class="flex justify-between items-center"><h2 class="text-xl font-bold">Data Siswa</h2><div class="flex gap-2 items-center"><div class="flex gap-1"><button class="${btnCls('ALL')}" data-class="ALL">Semua</button><button class="${btnCls('X')}" data-class="X">X</button><button class="${btnCls('XI')}" data-class="XI">XI</button><button class="${btnCls('XII')}" data-class="XII">XII</button></div>
+                <button id="btn-open-add-student" class="bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 transition" title="Tambah Siswa"><i data-lucide="plus" class="w-5 h-5"></i></button></div></div>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="bg-white rounded-xl border overflow-hidden shadow-sm">
+                        <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 class="font-bold text-sm text-gray-700">Daftar Siswa (${filtered.length})</h3>
+                            <div class="flex gap-2">
+                                <button id="btn-download-template" class="text-xs border px-3 py-1 bg-white rounded hover:bg-gray-50 flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i> Template</button>
+                                <div class="relative">
+                                    <input type="file" id="input-excel-file" class="hidden">
+                                    <button id="btn-trigger-upload" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1"><i data-lucide="upload" class="w-3 h-3"></i> Import Excel</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-50 border-b"><tr><th class="p-3">NIS</th><th class="p-3">Nama</th><th class="p-3">Info Tagihan</th><th class="p-3 text-right">Aksi</th></tr></thead>
+                                <tbody>
+                                    ${filtered.map(s=>`
+                                        <tr class="border-b hover:bg-gray-50">
+                                            <td class="p-3 font-mono text-gray-600">${s.nis}</td>
+                                            <td class="p-3"><div class="font-bold text-gray-800">${s.name}</div><div class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full w-fit mt-1">${s.className}</div></td>
+                                            <td class="p-3 text-gray-600">
+                                                <div class="flex flex-col gap-1">
+                                                    <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3 text-blue-400"></i> SPP: ${formatRupiah(s.monthlyFee)}</span>
+                                                    <span class="flex items-center gap-1"><i data-lucide="layers" class="w-3 h-3 text-purple-400"></i> DU: ${formatRupiah(s.reRegistrationFee)}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 text-right">
+                                                <div class="flex justify-end gap-1">
+                                                    <button data-id="${s.id}" class="btn-info-student bg-blue-50 text-blue-600 p-1.5 rounded hover:bg-blue-100 transition" title="Info"><i data-lucide="info" class="w-4 h-4"></i></button>
+                                                    <button data-id="${s.id}" class="btn-edit-student bg-orange-50 text-orange-600 p-1.5 rounded hover:bg-orange-100 transition" title="Edit"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                                    <button data-id="${s.id}" class="btn-delete-student bg-red-50 text-red-600 p-1.5 rounded hover:bg-red-100 transition" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    ${filtered.length === 0 ? '<tr><td colspan="4" class="p-8 text-center text-gray-400">Tidak ada data siswa ditemukan.</td></tr>' : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderPayment(c) {
+            const opts = studentsData.map(s=>`<option value="${s.id}">${s.nis} - ${s.name} (${s.className})</option>`).join('');
+            const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"].map(m=>`<option value="${m}">${m}</option>`).join('');
+            
+            c.innerHTML = `
+            <div class="max-w-5xl mx-auto space-y-4 fade-in h-full flex flex-col">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex items-center gap-4">
+                    <label class="text-sm font-bold text-gray-700 whitespace-nowrap">Pilih Siswa:</label>
+                    <div class="relative flex-1">
+                        <select id="pay-student-select" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none text-sm"><option value="">-- Cari Nama / NIS --</option>${opts}</select>
+                        <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
+                    <div class="w-full md:w-7/12 flex flex-col gap-4 overflow-y-auto pr-1">
+                        <div class="bg-white p-4 rounded-xl shadow-sm border">
+                            <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">Jenis Pembayaran</label>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div data-type="SPP" class="pay-card active cursor-pointer p-3 rounded-lg border text-center relative" id="card-spp"><div class="flex items-center justify-center gap-2 mb-1"><i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i><span class="font-bold text-sm">SPP Bulanan</span></div></div>
+                                <div data-type="DAFTAR_ULANG" class="pay-card cursor-pointer p-3 rounded-lg border text-center relative" id="card-du"><div class="flex items-center justify-center gap-2 mb-1"><i data-lucide="layers" class="w-4 h-4 text-purple-500"></i><span class="font-bold text-sm">Daftar Ulang</span></div></div>
+                            </div>
+                            <input type="hidden" id="pay-type-select" value="SPP">
+                            <div class="space-y-3 text-sm">
+                                <div class="flex gap-2">
+                                    <div class="w-1/3"><label class="text-[10px] text-gray-500 font-bold block mb-1">TAHUN</label><input type="number" id="pay-year-input" value="${new Date().getFullYear()}" class="w-full p-2 border rounded font-mono text-center"></div>
+                                    <div class="w-2/3" id="pay-month-container"><label class="text-[10px] text-gray-500 font-bold block mb-1">BULAN</label><select id="pay-month-select" class="w-full p-2 border rounded">${months}</select></div>
+                                </div>
+                                <div class="bill-card p-3 rounded-lg border border-gray-200"><div class="flex justify-between text-xs text-gray-500 mb-1"><span>Tagihan:</span> <span id="info-total">-</span></div><div class="flex justify-between text-xs text-gray-500 mb-2"><span>Terbayar:</span> <span id="info-paid">-</span></div><div class="flex justify-between text-sm font-bold border-t pt-2 mt-1 items-center"><span>Kekurangan:</span><span id="info-remain" class="text-red-500">-</span></div></div>
+                                <div><label class="text-[10px] text-gray-500 font-bold block mb-1">NOMINAL BAYAR</label><div class="relative"><span class="absolute left-3 top-2.5 text-gray-400 font-bold">Rp</span><input type="number" id="pay-amount-input" class="w-full pl-10 p-2 border rounded font-bold text-lg text-gray-800" placeholder="0"></div></div>
+                                <button id="btn-add-to-cart" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition shadow-sm text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Item</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-5/12 bg-white rounded-xl shadow-lg border flex flex-col h-full overflow-hidden">
+                        <div class="p-3 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-bold text-gray-700 text-sm flex items-center gap-2"><i data-lucide="shopping-cart" class="w-4 h-4"></i> Rincian</h3><button id="btn-clear-cart" onclick="paymentCart=[];renderCart();" class="text-[10px] text-red-500 hover:underline">Reset</button></div>
+                        <div class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50" id="cart-items"><div id="cart-empty" class="h-full flex flex-col items-center justify-center text-gray-300 py-10"><i data-lucide="receipt" class="w-10 h-10 mb-2"></i><p class="text-xs">Keranjang kosong</p></div></div>
+                        <div class="p-4 bg-white border-t z-10">
+                            <div class="flex justify-between items-center mb-3"><span class="text-gray-500 text-xs font-bold uppercase">Total Bayar</span><span id="cart-total" class="text-xl font-bold text-emerald-600">Rp 0</span></div>
+                            <textarea id="pay-notes" class="w-full p-2 border rounded text-xs mb-3 h-16 resize-none focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Catatan tambahan (Opsional)..."></textarea>
+                            <button id="btn-process-payment" disabled class="w-full bg-gray-300 text-gray-500 font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition cursor-not-allowed text-sm"><i data-lucide="printer" class="w-4 h-4"></i> BAYAR & CETAK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            
+            if(currentStudentId) {
+                document.getElementById('pay-student-select').value = currentStudentId;
+                renderCart();
+                updateBillingInfo();
+            }
+        }
+
+        function renderHistory(c) {
+            const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"].map(m=>`<option value="${m}">${m}</option>`).join('');
+            c.innerHTML = `
+            <div class="space-y-4 fade-in"><div class="flex justify-between items-center"><h2 class="text-xl font-bold">Riwayat</h2><div class="flex gap-2 bg-white p-1 rounded border"><select id="recap-month" class="border p-1 rounded text-xs">${months}</select><input type="number" id="recap-year" value="${new Date().getFullYear()}" class="border p-1 rounded text-xs w-16"><button id="btn-download-recap" class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Rekap</button></div></div>
+                <div class="bg-white rounded-xl border overflow-hidden"><table class="w-full text-xs text-left"><thead class="bg-gray-50 border-b"><tr><th class="p-2">Tanggal</th><th class="p-2">Siswa</th><th class="p-2">Info</th><th class="p-2">Total</th><th class="p-2">Aksi</th></tr></thead><tbody>${transactionsData.map(tx=>`<tr class="border-b hover:bg-gray-50"><td class="p-2 text-gray-500">${formatDate(tx.createdAt)}</td><td class="p-2"><b>${tx.studentName}</b></td><td class="p-2 text-[10px]">${tx.paymentType==='SPP'?`SPP ${tx.month}`:'Daftar Ulang'} ${tx.year}</td><td class="p-2 font-bold text-emerald-600">${formatRupiah(tx.amount)}</td><td class="p-2"><button data-id="${tx.id}" class="btn-print-invoice text-gray-600 hover:bg-gray-100 p-1 rounded"><i data-lucide="printer" class="w-4 h-4"></i></button></td></tr>`).join('')}</tbody></table></div><div class="text-right mt-4"><button id="btn-reset-transactions" class="text-red-500 text-[10px] hover:underline">Hapus Riwayat Transaksi</button></div></div>`;
+        }
+        
+        checkLogin();
+    </script>
+</body>
+</html>
